@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../services/foto_perfil_storage.dart';
 import '../services/media_service.dart';
 import 'foto_tela_cheia_screen.dart';
 
@@ -14,8 +15,23 @@ class PerfilScreen extends StatefulWidget {
 
 class _PerfilScreenState extends State<PerfilScreen> {
   final _mediaService = MediaService();
+  final _fotoStorage = FotoPerfilStorage();
   File? _imagemPerfil;
   final _nomeController = TextEditingController(text: 'Diego Menegassi');
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarFotoSalva();
+  }
+
+  /// Desafio Avançado: ao abrir o app, volta a foto da execução anterior.
+  Future<void> _carregarFotoSalva() async {
+    final foto = await _fotoStorage.carregar();
+    if (foto != null && mounted) {
+      setState(() => _imagemPerfil = foto);
+    }
+  }
 
   Future<void> _capturarImagem(bool daCamera) async {
     Navigator.pop(context);
@@ -24,8 +40,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
         : await _mediaService.selecionarDaGaleria();
 
     if (imagem != null) {
+      // Desafio Avançado: grava a foto antes de exibir
+      final salva = await _fotoStorage.salvar(imagem);
       setState(() {
-        _imagemPerfil = imagem;
+        _imagemPerfil = salva;
       });
     }
   }
@@ -72,6 +90,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
     setState(() {
       _imagemPerfil = null;
     });
+    // Desafio Avançado: a remoção também vale para a próxima abertura
+    _fotoStorage.remover();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Foto removida. Avatar padrão restaurado.')),
     );
