@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Aula 15: Câmera e Leitura de Armazenamento Externo -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- A partir do Android 13 a galeria abre pelo Photo Picker do sistema,
+         que dispensa permissão de leitura -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- A câmera é opcional: aparelhos sem câmera continuam instalando o app -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application
         android:label="pdm_aula15_camera_galeria"
         android:name="${applicationName}"
