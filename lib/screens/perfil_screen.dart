@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../services/media_service.dart';
+import 'foto_tela_cheia_screen.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -76,6 +77,15 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
+  void _abrirTelaCheia() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FotoTelaCheiaScreen(foto: _imagemPerfil!),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,15 +97,32 @@ class _PerfilScreenState extends State<PerfilScreen> {
             Center(
               child: Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 70,
-                    backgroundColor: Colors.pink.shade100,
-                    backgroundImage: _imagemPerfil != null
-                        ? FileImage(_imagemPerfil!)
-                        : null,
-                    child: _imagemPerfil == null
-                        ? const Icon(Icons.person, size: 70, color: Colors.pink)
-                        : null,
+                  // Desafio Intermediário: tocar na foto abre a tela cheia
+                  Semantics(
+                    button: _imagemPerfil != null,
+                    label: _imagemPerfil != null
+                        ? 'Ver foto em tela cheia'
+                        : 'Avatar padrão',
+                    child: GestureDetector(
+                      onTap: _imagemPerfil != null ? _abrirTelaCheia : null,
+                      child: Hero(
+                        tag: tagFotoPerfil,
+                        child: CircleAvatar(
+                          radius: 70,
+                          backgroundColor: Colors.pink.shade100,
+                          backgroundImage: _imagemPerfil != null
+                              ? FileImage(_imagemPerfil!)
+                              : null,
+                          child: _imagemPerfil == null
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 70,
+                                  color: Colors.pink,
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
                   ),
                   Positioned(
                     bottom: 0,
