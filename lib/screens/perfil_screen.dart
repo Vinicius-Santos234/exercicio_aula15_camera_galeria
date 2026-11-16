@@ -22,12 +22,27 @@ class _PerfilScreenState extends State<PerfilScreen> {
   @override
   void initState() {
     super.initState();
-    _carregarFotoSalva();
+    _restaurarFoto();
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    super.dispose();
   }
 
   /// Desafio Avançado: ao abrir o app, volta a foto da execução anterior.
-  Future<void> _carregarFotoSalva() async {
-    final foto = await _fotoStorage.carregar();
+  /// Antes disso, confere se o Android guardou uma foto tirada enquanto a
+  /// Activity estava destruída. Essa foto é a mais nova e passa na frente.
+  Future<void> _restaurarFoto() async {
+    File? foto;
+    try {
+      final perdida = await _mediaService.recuperarFotoPerdida();
+      if (perdida != null) foto = await _fotoStorage.salvar(perdida);
+    } catch (e) {
+      _avisarErro(e);
+    }
+    foto ??= await _fotoStorage.carregar();
     if (foto != null && mounted) {
       setState(() => _imagemPerfil = foto);
     }
@@ -35,17 +50,31 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
   Future<void> _capturarImagem(bool daCamera) async {
     Navigator.pop(context);
-    final File? imagem = daCamera
-        ? await _mediaService.tirarFoto()
-        : await _mediaService.selecionarDaGaleria();
+    // Permissão negada, aparelho sem câmera ou falha ao copiar o arquivo
+    // viram um aviso, em vez de uma exceção solta sem retorno ao usuário.
+    try {
+      final File? imagem = daCamera
+          ? await _mediaService.tirarFoto()
+          : await _mediaService.selecionarDaGaleria();
+      // null = o usuário cancelou a câmera ou a galeria
+      if (imagem == null) return;
 
-    if (imagem != null) {
       // Desafio Avançado: grava a foto antes de exibir
       final salva = await _fotoStorage.salvar(imagem);
+      // A tela pode ter sido fechada enquanto a câmera estava aberta
+      if (!mounted) return;
       setState(() {
         _imagemPerfil = salva;
       });
+    } catch (e) {
+      _avisarErro(e);
     }
+  }
+
+  void _avisarErro(Object erro) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(mensagemDeErroMidia(erro))));
   }
 
   void _exibirOpcoesMidia() {
@@ -59,13 +88,14 @@ class _PerfilScreenState extends State<PerfilScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                // O roteiro usa Colors.rose, que não existe no Flutter (erro de
-                // compilação). Colors.pink é o tom rosa equivalente.
-                leading: const Icon(Icons.camera_alt, color: Colors.pink),
-                title: const Text('Tirar Foto com a Câmera'),
-                onTap: () => _capturarImagem(true),
-              ),
+              if (_mediaService.cameraDisponivel)
+                ListTile(
+                  // O roteiro usa Colors.rose, que não existe no Flutter (erro
+                  // de compilação). Colors.pink é o tom rosa equivalente.
+                  leading: const Icon(Icons.camera_alt, color: Colors.pink),
+                  title: const Text('Tirar Foto com a Câmera'),
+                  onTap: () => _capturarImagem(true),
+                ),
               ListTile(
                 leading: const Icon(Icons.photo_library, color: Colors.pink),
                 title: const Text('Escolher da Galeria'),
@@ -91,7 +121,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
       _imagemPerfil = null;
     });
     // Desafio Avançado: a remoção também vale para a próxima abertura
-    _fotoStorage.remover();
+    _fotoStorage.remover().catchError(_avisarErro);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Foto removida. Avatar padrão restaurado.')),
     );

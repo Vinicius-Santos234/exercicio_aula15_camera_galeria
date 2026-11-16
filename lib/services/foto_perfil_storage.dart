@@ -53,9 +53,17 @@ class FotoPerfilStorage {
     if (caminho != null) await _apagar(caminho);
   }
 
+  /// Limpeza da cópia antiga. A chave já foi trocada ou removida, então a
+  /// foto não volta mesmo se o arquivo ficar. No Windows, apagar falha
+  /// enquanto a imagem ainda está sendo lida para a tela; isso não deve
+  /// virar erro para o usuário.
   Future<void> _apagar(String caminho) async {
-    final arquivo = File(caminho);
-    if (await arquivo.exists()) await arquivo.delete();
+    try {
+      final arquivo = File(caminho);
+      if (await arquivo.exists()) await arquivo.delete();
+    } on FileSystemException {
+      // Fica para a próxima limpeza
+    }
   }
 
   String _extensao(String caminho) {
